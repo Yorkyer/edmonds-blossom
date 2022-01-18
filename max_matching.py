@@ -18,7 +18,7 @@ class Node:
 
 
 class SuperNode(Node):
-    
+
     def __init__(self):
         Node.__init__(self)
         self.subnodes = []
@@ -51,32 +51,28 @@ class Path:
         return self.nodes[-1]
 
 
-    def replace_head(self):
-        assert isinstance(self.nodes[0], SuperNode)
-        snode = self.nodes.pop(0)
-        for node in snode.subnodes:
-            if self.nodes[0] in node.neighbors:
-                if node.mate == None:
-                    self.nodes.insert(0, node)
-                else:
-                    for v in snode.circle(node):
-                        self.nodes.insert(0, v)
-                return
-        logging.error("cannot replace head node.")
-
-
-    def replace_tail(self):
-        assert isinstance(self.nodes[-1], SuperNode)
-        snode = self.nodes.pop()
-        for node in snode.subnodes:
-            if self.nodes[-1] in node.neighbors:
-                if node.mate == None:
-                    self.nodes.append(node)
-                else:
-                    for v in snode.circle(node):
-                        self.nodes.append(v)
-                return
-        logging.error("cannot replace tail node.")
+    def replace(self, snode):
+        index = self.nodes.index(snode)
+        nodes = self.nodes[:index]
+        cur_node = nodes[-1]
+        for edge in snode.original_edges:
+            if edge[0] == cur_node:
+                cur_node = edge[1]
+                break
+            if edge[1] == cur_node:
+                cur_node = edge[0]
+                break
+        while cur_node.parent != snode.parent:
+            nodes.append(cur_node)
+            nodes.append(cur_node.mate)
+            for node in cur_node.mate.neighbors:
+                if node != cur_node and node in snode.subnodes:
+                    cur_node = node
+                    break
+            else:
+                raise Exception("replace error.")
+        nodes.append(cur_node)
+        self.nodes = nodes + self.nodes[index+1:]
 
 
     def __repr__(self):
@@ -125,9 +121,11 @@ class Match:
                         for v in cycle:
                             if v in queue:
                                 queue.remove(v)
-                            if v.is_visited:
-                                snode.is_visited = True
-                                snode.parent = v.parent
+                        snode.is_visited = True
+                        while node.parent in cycle:
+                            node = node.parent
+                        snode.parent = node.parent
+                        snode.mate = node.mate
                         queue.append(snode)
                         break
 
@@ -135,7 +133,7 @@ class Match:
                     node.parent = cur_node
                     return self.construct_augmenting_path(node)
 
-                else:
+                elif node.mate != cur_node:
                     node.is_visited = True
                     node.mate.is_visited = True
                     node.parent = cur_node
@@ -172,6 +170,10 @@ class Match:
                 logging.info('Tried all free nodes, no more augmenting path.')
                 break
 
+            for node in self.nodes:
+                if node.mate:
+                    assert node.mate.mate == node
+
 
     def invert_path(self, path):
         assert len(path.nodes) % 2 == 0
@@ -192,14 +194,11 @@ class Match:
         while len(self.supernodes) > 0:
             snode = self.supernodes.pop()
             self.expand_supernode(snode)
-            if snode == path.head():
-                path.replace_head()
-            elif snode == path.tail():
-                path.replace_tail()
+            path.replace(snode)
 
         while path.nodes[0].mate != None:
             path.nodes.insert(path.nodes[0].parent, 0)
-            
+
         while path.nodes[-1].mate != None:
             path.nodes.append(path.nodes[-1].parent)
 
@@ -233,6 +232,8 @@ class Match:
             for adj_node in node.neighbors:
                 if adj_node not in blossom:
                     snode.original_edges.append((node, adj_node))
+                    if adj_node.parent in blossom:
+                        adj_node.parent = snode
 
         for node1, node2 in snode.original_edges:
             node1.neighbors.remove(node2)
