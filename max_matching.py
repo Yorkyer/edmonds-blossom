@@ -126,7 +126,7 @@ class Match:
                             node = node.parent
                         snode.parent = node.parent
                         snode.mate = node.mate
-                        queue.append(snode)
+                        queue.insert(0, snode)
                         break
 
                 elif node.mate == None:
