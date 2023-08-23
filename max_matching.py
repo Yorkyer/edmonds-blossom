@@ -65,12 +65,21 @@ class Path:
         while cur_node.parent != snode.parent:
             nodes.append(cur_node)
             nodes.append(cur_node.mate)
+            
+            blossom_root = None
             for node in cur_node.mate.neighbors:
-                if node != cur_node and node in snode.subnodes:
-                    cur_node = node
-                    break
+                if node != cur_node and node in snode.subnodes and node.parent is None:
+                    blossom_root = node
+
+            if blossom_root is not None:
+                cur_node = blossom_root
             else:
-                raise Exception("replace error.")
+                for node in cur_node.mate.neighbors:
+                    if node != cur_node and node in snode.subnodes:
+                        cur_node = node
+                        break
+                else:
+                    raise Exception("replace error.")
         nodes.append(cur_node)
         self.nodes = nodes + self.nodes[index+1:]
 

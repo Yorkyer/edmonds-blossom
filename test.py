@@ -163,6 +163,14 @@ class TestMatch(unittest.TestCase):
         self.assertEqual(unmatched_nodes, 0)
 
 
+    def test_issue_5(self):
+        edges = [(1, 3), (1, 7), (1, 4), (7, 8), (7, 1), (7, 2), (7, 9), (5, 2), (8, 3), (8, 7), (8, 4), (8, 6), (4, 1), (4, 2), (4, 8), (4, 9), (3, 8), (3, 2), (3, 9), (3, 1), (3, 6), (2, 7), (2, 3), (2, 0), (2, 4), (2, 5), (0, 2), (6, 8), (6, 3), (9, 3), (9, 4), (9, 7)]
+        match = Match.from_edges(10, edges)
+        unmatched_nodes = match.unmatched_nodes()
+        
+        self.assertEqual(unmatched_nodes, 2)
+
+
     def test_maximum_matching(self):
         nodes = [Node() for i in range(6)]
         nodes[0].neighbors.append(nodes[1])
